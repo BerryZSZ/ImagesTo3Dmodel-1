@@ -229,6 +229,48 @@ function SIFT.diffofg(L)
 end
 local diffofg = SIFT.diffofg;
 
+-- TODO:  refactor: remove if
+-- @param output: inout, .....
+-- @param nSequence
+-- @param threshold: ...
+function SIFT.GetLocalMinimizerFrom3x3(output, octave, i,j, s, threshold, nSequence)
+	local a = octave[s][i][j];
+	if((a>threshold + k and
+	a>octave[s-1][i-1][j-1] + k and a>octave[s-1][i-1][j] + k and
+	a>octave[s-1][i-1][j + 1] + k and a>octave[s-1][i][j-1] + k and
+	a>octave[s-1][i][j + 1] + k and a>octave[s-1][i + 1][j-1] + k and 
+	a>octave[s-1][i + 1][j] + k and a>octave[s-1][i + 1][j + 1] + k and 
+	a>octave[s][i-1][j-1] + k and a>octave[s][i-1][j] + k and
+	a>octave[s][i-1][j + 1] + k and a>octave[s][i][j-1] + k and
+	a>octave[s][i][j + 1] + k and a>octave[s][i + 1][j-1] + k and 
+	a>octave[s][i + 1][j] + k and a>octave[s][i + 1][j + 1] + k and 
+	a>octave[s + 1][i-1][j-1] + k and a>octave[s + 1][i-1][j] + k and
+	a>octave[s + 1][i-1][j + 1] + k and a>octave[s + 1][i][j-1] + k and
+	a>octave[s + 1][i][j + 1] + k and a>octave[s + 1][i + 1][j-1] + k and 
+	a>octave[s + 1][i + 1][j] + k and a>octave[s + 1][i + 1][j + 1] + k and 
+	a>octave[s-1][i][j] + k and a>octave[s + 1][i][j] + k) or
+	(a<threshold + k and 
+	a<octave[s-1][i-1][j-1]-k and a<octave[s-1][i-1][j]-k and
+	a<octave[s-1][i-1][j + 1]-k and a<octave[s-1][i][j-1]-k and
+	a<octave[s-1][i][j + 1]-k and a<octave[s-1][i + 1][j-1]-k and 
+	a<octave[s-1][i + 1][j]-k and a<octave[s-1][i + 1][j + 1]-k and 
+	a<octave[s][i-1][j-1]-k and a<octave[s][i-1][j]-k and
+	a<octave[s][i-1][j + 1]-k and a<octave[s][i][j-1]-k and
+	a<octave[s][i][j + 1]-k and a<octave[s][i + 1][j-1]-k and 
+	a<octave[s][i + 1][j]-k and a<octave[s][i + 1][j + 1]-k and 
+	a<octave[s + 1][i-1][j-1]-k and a<octave[s + 1][i-1][j]-k and
+	a<octave[s + 1][i-1][j + 1]-k and a<octave[s + 1][i][j-1]-k and
+	a<octave[s + 1][i][j + 1]-k and a<octave[s + 1][i + 1][j-1]-k and 
+	a<octave[s + 1][i + 1][j]-k and a<octave[s + 1][i + 1][j + 1]-k and 
+	a<octave[s-1][i][j]-k and a<octave[s + 1][i][j]-k)) then
+		output[1][nSequence] = j-1;
+		output[2][nSequence] = i-1;
+		output[3][nSequence] = s + smin-1;
+		nSequence = nSequence + 1;
+	end
+end
+
+
 -- Returns the indexes of the local maximizers of the octave.
 function SIFT.localmax(octave, thresh, smin)
 	local S = #octave;
@@ -240,40 +282,7 @@ function SIFT.localmax(octave, thresh, smin)
 	for s = 2, S-1 do
 		for j = 20, M-20 do
 			for i = 12, N-12 do
-				local a = octave[s][i][j];
-				if((a>thresh + k and
-				a>octave[s-1][i-1][j-1] + k and a>octave[s-1][i-1][j] + k and
-				a>octave[s-1][i-1][j + 1] + k and a>octave[s-1][i][j-1] + k and
-				a>octave[s-1][i][j + 1] + k and a>octave[s-1][i + 1][j-1] + k and 
-				a>octave[s-1][i + 1][j] + k and a>octave[s-1][i + 1][j + 1] + k and 
-				a>octave[s][i-1][j-1] + k and a>octave[s][i-1][j] + k and
-				a>octave[s][i-1][j + 1] + k and a>octave[s][i][j-1] + k and
-				a>octave[s][i][j + 1] + k and a>octave[s][i + 1][j-1] + k and 
-				a>octave[s][i + 1][j] + k and a>octave[s][i + 1][j + 1] + k and 
-				a>octave[s + 1][i-1][j-1] + k and a>octave[s + 1][i-1][j] + k and
-				a>octave[s + 1][i-1][j + 1] + k and a>octave[s + 1][i][j-1] + k and
-				a>octave[s + 1][i][j + 1] + k and a>octave[s + 1][i + 1][j-1] + k and 
-				a>octave[s + 1][i + 1][j] + k and a>octave[s + 1][i + 1][j + 1] + k and 
-				a>octave[s-1][i][j] + k and a>octave[s + 1][i][j] + k) or
-				(a<thresh + k and 
-				a<octave[s-1][i-1][j-1]-k and a<octave[s-1][i-1][j]-k and
-				a<octave[s-1][i-1][j + 1]-k and a<octave[s-1][i][j-1]-k and
-				a<octave[s-1][i][j + 1]-k and a<octave[s-1][i + 1][j-1]-k and 
-				a<octave[s-1][i + 1][j]-k and a<octave[s-1][i + 1][j + 1]-k and 
-				a<octave[s][i-1][j-1]-k and a<octave[s][i-1][j]-k and
-				a<octave[s][i-1][j + 1]-k and a<octave[s][i][j-1]-k and
-				a<octave[s][i][j + 1]-k and a<octave[s][i + 1][j-1]-k and 
-				a<octave[s][i + 1][j]-k and a<octave[s][i + 1][j + 1]-k and 
-				a<octave[s + 1][i-1][j-1]-k and a<octave[s + 1][i-1][j]-k and
-				a<octave[s + 1][i-1][j + 1]-k and a<octave[s + 1][i][j-1]-k and
-				a<octave[s + 1][i][j + 1]-k and a<octave[s + 1][i + 1][j-1]-k and 
-				a<octave[s + 1][i + 1][j]-k and a<octave[s + 1][i + 1][j + 1]-k and 
-				a<octave[s-1][i][j]-k and a<octave[s + 1][i][j]-k)) then
-					J[1][nb] = j-1;
-					J[2][nb] = i-1;
-					J[3][nb] = s + smin-1;
-					local nb = nb + 1; 
-				end
+				SIFT.GetLocalMinimizerFrom3x3(J, octave, i,j, s, thresh, nb)
 			end
 		end
 	end
@@ -282,7 +291,7 @@ end
 local localmax = SIFT.localmax;
 
 -- Refine the location, threshold strength and remove points on edges
-function SIFT.extrafine(oframes, octave, smin, thresh, r)
+function SIFT.ExtraFine(oframes, octave, smin, thresh, r)
 	local S = #octave;
 	local M = #octave[1];
 	local N = #octave[1][1];
@@ -388,7 +397,7 @@ local extrafine = SIFT.extrafine;
 --[[This function computes the major orientation of the keypoint (oframes).
 Note that there can be multiple major orientation. In that case, the 
 SIFT kes will be duplicated for each major orientation]]
-function SIFT.orientation(oframes, octave, S, smin, sigma0)
+function SIFT.ComputeOrientation(oframes, octave, S, smin, sigma0)
 	local frames = {{}, {}, {}, {}};
 	local win_factor = 1.5;
 	local NBINS = 36;
@@ -577,14 +586,14 @@ function SIFT.DO_SIFT(I, O, S)
 	local frames = {{}, {}, {}, {}};
 	local descriptors = {};
 
-	LOG.std("---------- Extract SIFT features from an image ----------");
-	LOG.std("SIFT: constructing scale space with DoG ..."); 
+	LOG.std(nil, "debug", "SIFT", "---------- Extract SIFT features from an image ----------");
+	LOG.std(nil, "debug", "SIFT", "SIFT: constructing scale space with DoG ..."); 
 
 	local scalespace = gaussian(I, O, S, omin, -1, S + 1);
 	local difofg = diffofg(scalespace);
 
 	for o = 1, scalespace.O do
-		LOG.std("SIFT: computing octave: ", o-1 + omin);
+		LOG.std(nil, "debug", "SIFT", "SIFT: computing octave: %f", o-1 + omin);
 		local oframesPrime = localmax(difofg.octave[o], 0.8 * thresh, difofg.smin);
         
 		LOG.std("SIFT: initial keypoints: ", #oframesPrime[1]);
