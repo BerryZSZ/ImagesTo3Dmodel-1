@@ -56,6 +56,11 @@ local imP = commonlib.gettable("imP");
 local imP.tensor = commonlib.inherit(nil, commonlib.gettable("imP.imP.tensor"));
 
 
+-- TODO
+function imP.tensor:ctor()
+	self.dimension = 1;
+end
+
 -- Creat the zeros matrix.
 function imP.tensor.zeros(height, width)
 	local array = {};
@@ -249,6 +254,7 @@ local ArrayAdd = imP.tensor.ArrayAdd;
 
 
 -- Two having same heigth and width array add
+-- TODO: AddTwoArrays
 function imP.tensor.ArrayAddArray(array1, array2)
 	local h1 = #(array1);
 	local w1 = #(array1[1]);
