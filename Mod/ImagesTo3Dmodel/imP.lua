@@ -6,16 +6,17 @@ Desc:
 use the lib:
 ------------------------------------------------------------
 NPL.load("(gl)Mod/ImagesTo3Dmodel/imP.lua",true);
-local filename = "Mod/ImagesTo3Dmodel/lena.png";
-array=imP.imread2Grey(filename);
-R=imP.HarrisCD(array)
-imP.CreatTXT(R, "D:/University/SOC2017/ParaCraftSDK-master/ParaCraftSDK-master/_mod/ImagesTo3Dmodel/Mod/ImagesTo3Dmodel/harris.txt");
+local filename = "Mod/ImagesTo3Dmodel/lena.jpg";
+local Im = imP.imread(filename);
+local I = imP.rgb2gray(Im);
+imP.CreatTXT(I, "D:/University/SOC2017/LuaCode/lena.txt")
 ------------------------------------------------------------
 ------------------------------------------------------------
 local zeros = imP.tensor.zeros;
 local zeros3 = imP.tensor.zeros3;
 local Round = imP.Round;
-local imread2Grey = imP.imread2Grey;
+local imread = imP.imread;
+local rgb2gray = imP.rgb2gray;
 local CreatTXT = imP.CreatTXT;
 local DotProduct = imP.tensor.DotProduct;
 local ArraySum = imP.tensor.ArraySum;
@@ -48,18 +49,14 @@ local submatrix = imP.tensor.submatrix;
 local connect = imP.tensor.connect;
 local reshape = imP.tensor.reshape;
 local transposition = imP.tensor.transposition;
+local norm = imP.tensor.norm;
+local dot = imP.tensor.dot;
 
 ------------------------------------------------------------
 ]]
 
 local imP = commonlib.gettable("imP");
-local imP.tensor = commonlib.inherit(nil, commonlib.gettable("imP.imP.tensor"));
-
-
--- TODO
-function imP.tensor:ctor()
-	self.dimension = 1;
-end
+local tensor = commonlib.inherit(nil, commonlib.gettable("imP.tensor"));
 
 -- Creat the zeros matrix.
 function imP.tensor.zeros(height, width)
@@ -106,8 +103,8 @@ local Round = imP.Round;
 --print(Round(9.3));
 
 
---Read the image and creat the Grey image.
-function imP.imread2Grey(filename)
+--Read the image and creat the Gray image.
+function imP.imread(filename)
 	local file = ParaIO.open(filename, "image");
 	if(file:IsValid()) then
 		local ver = file:ReadInt();
@@ -117,16 +114,16 @@ function imP.imread2Grey(filename)
 		local bytesPerPixel = file:ReadInt();
 		-- echo({ver, width = width, height = height, bytesPerPixel = bytesPerPixel})
 		local pixel = {};
-		local array = zeros(height, width);
+		local array = {};
+		for i = 1, bytesPerPixel do
+			array[i] = zeros(height, width);
+		end
 		for j = 1, height do
 			for i = 1, width do
 				pixel = file:ReadBytes(bytesPerPixel, pixel);
-				array[j][i] = pixel[1];
-				for h = 2, bytesPerPixel do				    
-					array[j][i] = array[j][i] + pixel[h];
+				for h = 1, bytesPerPixel do				    
+					array[h][j][i] = pixel[h];
 				end
-				array[j][i] = Round(array[j][i] / bytesPerPixel);
-				--echo({i, j,array[j][i]});
 			end
 		end
 		return array;
@@ -134,8 +131,23 @@ function imP.imread2Grey(filename)
 		print("The file is not valid");
 	end
 end
-local imread2Grey = imP.imread2Grey;
+local imread = imP.imread;
 
+function imP.rgb2gray(array)
+	if (#array == 3 and type(array[1]) == "table" and type(array[1][1]) == "table") then
+		local row = #array[1];
+		local column = #array[1][1];
+		local self = zeros(row, column);
+		for i = 1, row do
+			for j = 1, column do
+				self[i][j] = (299*array[1][i][j] + 587*array[2][i][j] + 114*array[3][i][j])/1000;
+				self[i][j] = math.floor(self[i][j] + 0.5);
+			end
+		end
+		return self;
+	end
+end
+local rgb2gray = imP.rgb2gray;
 
 -- Creat the txt file of the array.
 function imP.CreatTXT(array, filename)	
@@ -206,7 +218,11 @@ local ArrayShowE = imP.tensor.ArrayShowE;
 -- Show the array.
 function imP.tensor.ArrayShow(array)
 	for i, v in pairs(array) do
-		print(table.concat(v, " "));
+		if type(v) == "table" then
+			print(table.concat(v, " "));
+		else
+			print(v, "");
+		end
 	end
 end
 local ArrayShow = imP.tensor.ArrayShow;
@@ -223,16 +239,24 @@ local ArrayShow3 = imP.tensor.ArrayShow3;
 
 -- Array mutliplies number.
 function imP.tensor.ArrayMutl(array, n)
-	local h = #(array);
-	local w = #(array[1]);
-	local array_o = zeros(h, w)
-	for i = 1, h do
-		for j = 1, w do
-			array_o[i][j] = array[i][j] * n;
+	if type(array[1]) == "table" then
+		local h = #(array);
+		local w = #(array[1]);
+		local array2_o = zeros(h, w);
+		for i = 1, h do
+			for j = 1, w do
+				array2_o[i][j] = array[i][j] * n;
+			end
 		end
+		return array2_o;
+	else 
+		local array1_o = {}
+		for i = 1, #array do
+			array1_o[i] = array[i]*n;
+		end
+		return array1_o;
 	end
-	return array_o;
-end
+ end
 local ArrayMutl = imP.tensor.ArrayMutl;
 --ArrayShow(ArrayMutl(array,3))
 
@@ -254,7 +278,6 @@ local ArrayAdd = imP.tensor.ArrayAdd;
 
 
 -- Two having same heigth and width array add
--- TODO: AddTwoArrays
 function imP.tensor.ArrayAddArray(array1, array2)
 	local h1 = #(array1);
 	local w1 = #(array1[1]);
@@ -849,3 +872,31 @@ function imP.tensor.transposition(M)
 	return self;
 end
 local transposition = imP.tensor.transposition;
+
+function imP.tensor.norm(array)
+	local self = 0;
+	if type(array[1]) == "table" then
+		for i = 1, #array[1] do
+			self = self + (array[1][i])^2;
+		end
+	else
+		for j = 1, #array do
+			self = self + (array[j])^2;
+		end
+	end
+	self = math.sqrt(self);
+	return self;
+end
+local norm = imP.tensor.norm;
+
+function imP.tensor.dot( array1, array2 )
+	local self = 0;
+	if #array1 == #array2 then
+		for i = 1, #array1 do
+			self = self + array1[i]*array2[i];
+			print(self,i,array1[i]*array2[i])
+		end
+	end
+	return self;
+end
+local dot = imP.tensor.dot;
