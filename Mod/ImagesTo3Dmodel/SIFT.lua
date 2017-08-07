@@ -64,13 +64,12 @@ local reshape = imP.tensor.reshape;
 local transposition = imP.tensor.transposition;
 local norm = imP.tensor.norm;
 local dot = imP.tensor.dot;
-
+local mod = imP.tensor.mod
 ----------------------------------------------------
 local ceil = math.ceil;
 local fmod = math.fmod;
 local abs = math.abs;
 local sqrt = math.sqrt;
-local mod = math.mod;
 local atan = math.atan;
 local pi = math.pi;
 local floor = math.floor;
@@ -79,7 +78,7 @@ local min = math.min;
 local exp = math.exp;
 local sin = math.sin;
 local cos = math.cos;
-local acos = math.acos;
+
 -----------------------------------------------------
 -- Resize the image to its half
 function SIFT.HalfSize(array)
@@ -175,16 +174,9 @@ function SIFT.gaussian(I, O, S, omin, smin, smax)
 	--Initilize the first sub-level
 	local sig =((sigma0 * k^smin)^2 - (sigmaN / 2^omin)^2)^0.5;
 	L.octave[1][1] = GaussianF(I, sig);
---	print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
---	ArrayShow(L.octave[1][1])
 	for s = smin + 1, smax do
 		local dsigma = k^s * dsigma0;
 		L.octave[1][s + so] = GaussianF(L.octave[1][s + so-1], dsigma);
---		print("fffffffffffffffffffffffffffffff")
---		print(#L.octave[1][s + so],s+so)
---		print(#L.octave[1][s + so][1],s+so)
---        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
---		ArrayShow(L.octave[1][s + so])
 	end
 	
 	------------------------------
@@ -203,21 +195,14 @@ function SIFT.gaussian(I, O, S, omin, smin, smax)
 
 		local m = #TMP;
 		local n = #TMP[1];
---		print("mmmmmmmmmmmmmmmnnnnnnnnnnnnnn",m,n)
 		L.octave[o] = zeros3(smax-smin + 1, m, n);
 		L.octave[o][1] = TMP;
 
 		for s = smin + 1, smax do
 			local dsigma = k^s * dsigma0;
 			L.octave[o][s + so] = GaussianF(L.octave[o][s + so-1], dsigma0);
---			print("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
---			print(#L.octave[o][s+so],s+so)
---			print(#L.octave[o][s+so][1],s+so)
---            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
---			ArrayShow(L.octave[o][s + so])
 		end
 	end
-	--print("--------------------",#L.octave,#L.octave[1])
 	return L;
 end
 local gaussian = SIFT.gaussian;
@@ -232,44 +217,24 @@ function SIFT.diffofg(L)
 	D.S = L.S;
 	D.sigma0 = L.sigma0;
 	D.octave = {};
---	print(D.O,"[[[[[[[[[[[[[[[[[[")
 	for o = 1, D.O do
 		local S = #L.octave[o];
 		local M = #L.octave[o][1];
 		local N = #L.octave[o][1][1];
 		table.insert(D.octave,zeros3(S-1, M, N));
-		--D.octave[o] = zeros3(S-1, M, N);
---		print("yyyyyyyyyyyyyyyyyyyy",type(D.octave[1]),#D.octave[1], o)
---		print(type(D.octave[1][1]), #D.octave[1][1])
---		print(type(D.octave[1][1][1]), #D.octave[1][1][1])
 
 		for s = 1, S-1 do
---			print("llllllllllllllllllllllllll")
---			print(#L.octave[o][s],#L.octave[o][s+1])
---			print(#L.octave[o][s][1],#L.octave[o][s+1][1])
-
 			local minus_octave = ArrayMutl(L.octave[o][s], -1);
 
 			D.octave[o][s] = ArrayAddArray(L.octave[o][s + 1], minus_octave);
---			print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
---			ArrayShow(D.octave[o][s])
---			print(#D.octave[o][s])
---			print(#D.octave[o][s][1])
 		end
---		print("zzzzzzzzzzzzzzzzzzzz",type(D.octave[1]),o)
---		print(type(D.octave[1][1]))
---		print(type(D.octave[1][1][1]))
 	end
---	print("xxxxxxxxxxxxx",type(D.octave[1]))
---	print(type(D.octave[1][1]))
---	print(type(D.octave[1][1][1]))
 	return D;
 end
 local diffofg = SIFT.diffofg;
 
 -- Returns the indexes of the local maximizers of the octave.
 function SIFT.localmax(octave, thresh, smin)
---    print("max--------------")
 	local S = #octave;
 	local M = #octave[1];
 	local N = #octave[1][1];
@@ -278,7 +243,7 @@ function SIFT.localmax(octave, thresh, smin)
 	local J = {{}, {}, {}};
 	for s = 2, S-1 do
 		for i = 20, M-20 do
-			for j = 12, N-12 do
+			for j = 20, N-20 do
 				local a = octave[s][i][j];
 				if((a>thresh + k and
 				a>octave[s-1][i-1][j-1] + k and a>octave[s-1][i-1][j] + k and
@@ -294,7 +259,7 @@ function SIFT.localmax(octave, thresh, smin)
 				a>octave[s + 1][i][j + 1] + k and a>octave[s + 1][i + 1][j-1] + k and 
 				a>octave[s + 1][i + 1][j] + k and a>octave[s + 1][i + 1][j + 1] + k and 
 				a>octave[s-1][i][j] + k and a>octave[s + 1][i][j] + k)
-				--[[or
+				or
 				(a<thresh + k and 
 				a<octave[s-1][i-1][j-1]-k and a<octave[s-1][i-1][j]-k and
 				a<octave[s-1][i-1][j + 1]-k and a<octave[s-1][i][j-1]-k and
@@ -308,11 +273,11 @@ function SIFT.localmax(octave, thresh, smin)
 				a<octave[s + 1][i-1][j + 1]-k and a<octave[s + 1][i][j-1]-k and
 				a<octave[s + 1][i][j + 1]-k and a<octave[s + 1][i + 1][j-1]-k and 
 				a<octave[s + 1][i + 1][j]-k and a<octave[s + 1][i + 1][j + 1]-k and 
-				a<octave[s-1][i][j]-k and a<octave[s + 1][i][j]-k)]]) then
-					J[1][nb] = j-1;
-					J[2][nb] = i-1;
+				a<octave[s-1][i][j]-k and a<octave[s + 1][i][j]-k)) then
+					J[1][nb] = i-1;
+					J[2][nb] = j-1;
 					J[3][nb] = s + smin-1;
-					local nb = nb + 1; 
+					nb = nb + 1; 
 				end
 			end
 		end
@@ -449,7 +414,13 @@ function SIFT.orientation(oframes, octave, S, smin, sigma0)
 		for i = 1, M do 
 			for j = 1, N do 
 				magnitudes[si][i][j] = sqrt(gradient_x[i][j]^2 + gradient_y[i][j]^2);
-				angles[si][i][j] = mod(atan(gradient_y[i][j] / gradient_x[i][j]) + 2 * pi, 2 * pi);
+				if gradient_x[i][j] == 0 and gradient_y[i][j] ~= 0 then
+					angles[si][i][j] = mod(pi/2*gradient_y[i][j]/abs(gradient_y[i][j]) + 2 * pi, 2 *pi)
+				elseif gradient_x[i][j] == 0 and gradient_y[i][j] == 0 then
+					angles[si][i][j] = 0;
+				else
+					angles[si][i][j] = mod(atan(gradient_y[i][j] / gradient_x[i][j]) + 2 * pi, 2 * pi);
+				end
 			end
 		end
 	end
@@ -476,7 +447,8 @@ function SIFT.orientation(oframes, octave, S, smin, sigma0)
 				local dy = ys - y[p];
 				if dx^2 + dy^2 <= W^2 then 
 					local wincoef = exp(-(dx^2 + dy^2) / (2 * sigmaw^2));
-					local bin = ceil(NBINS * angles[sp + 1][ys][xs] / (2 * pi));
+					local bin = floor(NBINS * angles[sp + 1][ys][xs] / (2 * pi) + 1);
+					--print(bin, wincoef, magnitudes[sp + 1][ys][xs], sp + 1, ys, xs,p);
 					histo[1][bin] = histo[1][bin] + wincoef * magnitudes[sp + 1][ys][xs];
 				end
 			end
@@ -521,7 +493,15 @@ function SIFT.descriptor(octave, oframes, sigma0, S, smin, magnif, NBP, NBO)
 		for i = 1, M do 
 			for j = 1, N do 
 				magnitudes[si][i][j] = sqrt(gradient_x[i][j]^2 + gradient_y[i][j]^2);
-				angles[si][i][j] = mod(atan(gradient_y[i][j] / gradient_x[i][j]) + 2 * pi, 2 * pi);
+				local angle_yx;
+				if gradient_x[i][j]==0 and gradient_y[i][j]==0 then
+					angle_yx = 0;
+				elseif gradient_x[i][j]==0 and gradient_y[i][j]~=0 then
+					angle_yx = pi/2;
+				else
+					angle_yx = atan(gradient_y[i][j] / gradient_x[i][j]);
+				end
+				angles[si][i][j] = mod(angle_yx + 2 * pi, 2 * pi);
 			end
 		end
 	end
@@ -550,7 +530,7 @@ function SIFT.descriptor(octave, oframes, sigma0, S, smin, magnif, NBP, NBO)
 		for dxi = max(-W, 1 - xp), min(W, N-2 - xp) do
 			for dyi = max(-W, 1 - yp), min(W, M-2 - yp) do
 				local mag = magnitudes[sp][yp + dyi][xp + dxi];
-				local angle0 = angles[sp][yp + dyi][xp + dyi];
+				local angle0 = angles[sp][yp + dyi][xp + dxi];
 				local angle = mod(theta0-angle0, 2 * pi);
 				local dx = xp + dxi-x[p];
 				local dy = yp + dyi-y[p];
@@ -574,11 +554,6 @@ function SIFT.descriptor(octave, oframes, sigma0, S, smin, magnif, NBP, NBO)
 							(biny + dbiny < wsigma)) then
 								local weight =(wincoef * mag * abs(1 - dbinx-rbinx)*
 								abs(1 - dbiny-rbiny) * abs(1 - dbint-rbint));
-								print("++++++++++++++++++++++++");
-								print(descriptor[binx + dbinx + wsigma + 1][biny + dbiny + wsigma + 1][mod((bint + dbint), NBO) + 1])
-								print(binx + dbinx + wsigma + 1,biny + dbiny + wsigma + 1,mod((bint + dbint), NBO) + 1)
-								print(weight,wincoef , mag , abs(1 - dbinx-rbinx),abs(1 - dbiny-rbiny) , abs(1 - dbint-rbint))
-								print(rbinx,rbiny,rbint,dbinx,dbiny,dbint)
 								descriptor[binx + dbinx + wsigma + 1][biny + dbiny + wsigma + 1][mod((bint + dbint), NBO) + 1] = 
 								descriptor[binx + dbinx + wsigma + 1][biny + dbiny + wsigma + 1][mod((bint + dbint), NBO) + 1] + weight;
 							end
@@ -588,18 +563,20 @@ function SIFT.descriptor(octave, oframes, sigma0, S, smin, magnif, NBP, NBO)
 			end
 		end
 		local descriptor0 = zeros(NBP * NBP * NBO, 1);
+		local descriptor0Norm = 0;
 		for i = 1, NBP * NBP * NBO do
-			local descriptor0_x = mod(mod(i, NBO), NBP);
-			local descriptor0_y = ceil(mod(i, NBO) / NBP);
-			local descriptor0_s = ceil(i / NBO);
+			local descriptor0_s = ceil(i / (NBP^2));
+			local descriptor0_y = ceil((i - NBP^2*(descriptor0_s - 1))/NBP);
+			local descriptor0_x = i - NBP*(descriptor0_y - 1) - NBP^2*(descriptor0_s - 1);		
 			descriptor0[i][1] = descriptor[descriptor0_x][descriptor0_y][descriptor0_s];
-			descriptor0Norm = descriptor0Norm +(descriptor0[i])^2
+			descriptor0Norm = descriptor0Norm +(descriptor0[i][1])^2
 		end
 		descriptor0Norm = sqrt(descriptor0Norm);
-		descriptor0 = ArrayMutl(descriptor0, descriptor0Norm);
+		descriptor0 = ArrayMutl(descriptor0, 1/descriptor0Norm);
+		
 		if p==1 then
 			descriptors = descriptor0;
-		elseif p>1 then
+		elseif p>1 and descriptor0[1]~=nil then
 			descriptors = connect(descriptors, descriptor0);
 		end
 	end
@@ -627,16 +604,14 @@ function SIFT.DO_SIFT(I, O, S)
 	local difofg = diffofg(scalespace);
 	for o = 1, scalespace.O do
 		LOG.std(nil,"debug","SIFT","SIFT: computing octave: %f", o-1 + omin);
-		local max_octave = difofg.octave[o];
-		local oframesPrime = localmax(max_octave, 0.8 * thresh, difofg.smin);
-        
+		local oframesPrime = localmax(difofg.octave[o], 0.8 * thresh, difofg.smin);
 		LOG.std(nil,"debug","SIFT","SIFT: initial keypoints: %f", #oframesPrime[1]);
 
 
-        -- Remove pointd too close to the boundary
-		local rad = {}; 
+		-- Remove pointd too close to the boundary
+		local red = {}; 
 		local oframesLength = #oframesPrime[3];
-		for i = 1, oframesLength do
+		for i = 1, oframesLength do 
 			red[i] = magnif * scalespace.sigma0 * (2^(oframesPrime[3][i] / scalespace.S)) * NBP / 2;
 		end
 		local oframes = {};
@@ -655,27 +630,27 @@ function SIFT.DO_SIFT(I, O, S)
 				oframes[3][oframesCount] = oframesPrime[3][i];
 			end
 		end
-		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f", oframesCount, " after discarding from boundary");
-      	-- Refine the location, threshold strength and remove points on edges
+		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f after discarding from boundary", oframesCount);
+		-- Refine the location, threshold strength and remove points on edges
 		local oframesExtrafined = extrafine(oframes, difofg.octave[o], difofg.smin, thresh, r);
-		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f", #oframesExtrafined[1], " after discarding from low constrast and edges");
+		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f  after discarding from low constrast and edges", #oframesExtrafined[1]);
 		LOG.std(nil,"debug","SIFT","SIFT: compute orientations of keypoints");
-       	-- Computer the orientations
+		-- Computer the orientations
 		local oframesOrientation = orientation(oframesExtrafined, scalespace.octave[o], scalespace.S, scalespace.smin, scalespace.sigma0);
-       	-- Store frames
+		-- Store frames
 		for i = 1, #oframesOrientation[1] do
 			frames[1][i] = 2^(o-1 + scalespace.omin) * oframesOrientation[1][i];
 			frames[2][i] = 2^(o-1 + scalespace.omin) * oframesOrientation[2][i];
 			frames[3][i] = 2^(o-1 + scalespace.omin) * scalespace.sigma0 * 2^(oframesOrientation[3][i] / scalespace.S);
 			frames[4][i] = oframesOrientation[4][i];
 		end
-		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f", #oframesOrientation[1], " after orientation computation");
-       	-- Descriptors
+		LOG.std(nil,"debug","SIFT","SIFT: keypoints # %f after orientation computation", #oframesOrientation[1]);
+		-- Descriptors
 		LOG.std(nil,"debug","SIFT","SIFT: computer descriptors...");
-		local sh = descriptor(scalespace.octave[o], oframesOrientation, scalespace.sigma0, scalespace.S, scalespace, smin, magnif, NBP, NBO);
+		local sh = descriptor(scalespace.octave[o], oframesOrientation, scalespace.sigma0, scalespace.S, scalespace. smin, magnif, NBP, NBO);
 		if o == 1 then 
 			descriptors = sh;
-		elseif o > 1 then
+		elseif (o > 1 and sh[1] ~= nil) then
 			descriptors = connect(descriptors, sh);
 		end
 	end
@@ -695,27 +670,34 @@ function SIFT.match(im1, des1, loc1, im2, des2, loc2)
 	local match = {};
 	local des2t = transposition(des2);
 	for i = 1, #des1 do 
-		local dotprods = MatrixMultiple({des1[1]}, des2t);
-		local SortDotprods = dotprods[1];
-		for j = 1, #SortDotprods do
-			SortDotprods[j] = acos( SortDotprods[j] );
+		local dotprods = MatrixMultiple({des1[i]}, des2t);
+		local SortDotprods = {};
+		local SortDotprods0 = {};
+		for j = 1, #dotprods[1] do
+			SortDotprods[j] = math.acos( dotprods[1][j] );
+			SortDotprods0[j] = math.acos( dotprods[1][j] );
 		end
+		
 		table.sort(SortDotprods);
 		-- Find the index of first and second max values
 		local FirstIndex = 1;
-		while ( SortDotprods[1] ~= dotprods[1][FirstIndex] ) 
-			do FirstIndex = FirstIndex + 1;
+		--print(SortDotprods[1], SortDotprods0[FirstIndex], FirstIndex)
+		while ( SortDotprods[1] ~= SortDotprods0[FirstIndex] ) 
+			do
+			FirstIndex = FirstIndex + 1;
 		end
 		-- local SecondIndex = 1;
 		-- while ( SortDotprods[2] ~= dotprods[1][SecondIndex] )
-		-- 	do SecondIndex = SecondIndex + 1;
+		-- 	do SecondIndex = SecondIndex + 1;s
 		-- end
-		if ( SortDotprods[1] < distRatio*SortDotprods ) then
+		--print("+",SortDotprods[1],SortDotprods[2],SortDotprods0[1],SortDotprods0[2])
+		if ( SortDotprods[1] < distRatio*SortDotprods[2] ) then
 			match[i] = FirstIndex;
 			table.insert(matched_points_im1, i)
 		else
 			match[i] = 0;
 		end
+		--print("=",match[i], FirstIndex,i)
 	end
 	local dis_threshold = 0.3;
 	local orien_threshold = 0.3;
