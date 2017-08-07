@@ -51,7 +51,7 @@ local reshape = imP.tensor.reshape;
 local transposition = imP.tensor.transposition;
 local norm = imP.tensor.norm;
 local dot = imP.tensor.dot;
-
+local mod = imP.tensor.mod;
 ------------------------------------------------------------
 ]]
 
@@ -91,13 +91,8 @@ local zeros3 = imP.tensor.zeros3;
 
 -- Find the nearest integer.
 function imP.Round(n)
-	if(math.ceil(n)-n) >=(n-math.floor(n)) then
-		local t = math.floor(n);
-		return(t)
-	else
-		local c = math.ceil(n);
-		return(c)
-	end
+	local self = math.floor(n + 0.5);
+	return self;
 end
 local Round = imP.Round;
 --print(Round(9.3));
@@ -900,3 +895,44 @@ function imP.tensor.dot( array1, array2 )
 	return self;
 end
 local dot = imP.tensor.dot;
+
+function imP.tensor.mod(number1, number2)
+	local self = math.mod(number1, number2);
+	if self < 0 then
+		self = self + number2;
+	end
+	return self;
+end
+local mod = imP.tensor.mod;
+
+--get gradient gx and gy of matrix m
+--e.g.
+-- local D = {}
+-- D[1] = {1,1,0,0,1};
+-- D[2] = {2,1,2,2,0};
+-- D[3] = {2,1,1,0,1};
+-- local gx,gy = imP.tensor.gradient(D)
+--gx and gy are matrixes 
+function  imP.tensor.gradient( m )
+	local rows = #m;
+	local cols = #m[1];
+	local gx = zeros(rows,cols);
+	local gy = zeros(rows,cols);
+	for i = 1,rows do 
+		gy[i][1] = m[i][2]-m[i][1]
+		gy[i][cols] = m[i][cols]-m[i][cols-1]
+		for j = 2, cols-1 do
+			gy[i][j] = 0.5*(m[i][j+1]-m[i][j-1])
+		end
+	end
+	for j = 1, cols do 
+		gx[1][j] = m[2][j]-m[1][j]
+		gx[rows][j] = m[rows][j]-m[rows-1][j]
+		for i = 2, rows-1 do
+			gx[i][j] = 0.5*(m[i+1][j]-m[i-1][j])
+		end
+	end
+	return gx,gy
+end
+local gradient = imP.tensor.gradient;
+
