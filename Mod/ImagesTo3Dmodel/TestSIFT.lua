@@ -66,7 +66,7 @@ local descriptor = SIFT.descriptor;
 local DO_SIFT = SIFT.DO_SIFT;
 local match = SIFT.match;
 
-local Im_filename = "Mod/ImagesTo3Dmodel/demo-data/church3/2.jpg";
+local Im_filename = "Mod/ImagesTo3Dmodel/lena.jpg";
 
 --local TXT_filename = "D:/University/SOC2017/ParaCraftSDK-master/ParaCraftSDK-master/_mod/ImagesTo3Dmodel/Mod/ImagesTo3Dmodel/demo-data/fountain/1.txt";
 

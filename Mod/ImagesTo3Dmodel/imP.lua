@@ -166,10 +166,11 @@ local CreatTXT = imP.CreatTXT;
 
 
 -- Array dot product.
-function imP.tensor.DotProduct(array1, array2)
+-- @param output: inout result of a1*a2. if nil, a new array is created
+function imP.tensor.DotProduct(array1, array2, output)
 	local h = #(array1);
 	local w = #(array1[1]);
-	array = zeros(h, w);
+	local array = output or zeros(h, w);
 	for i = 1, h do
 		for j = 1, w do
 			array[i][j] = array1[i][j] * array2[i][j];
@@ -399,6 +400,7 @@ function imP.GaussianF(array, sig)
 	local g = GetGaussian(sig);
 	--ArrayShow(g);
 	local A = zeros(wsize, wsize);
+	local tempResult = zeros(wsize, wsize);
 	for i = 1 + d, h - d do
 		for j = 1 + d, w - d do
 			for a = 1, wsize do
@@ -406,7 +408,7 @@ function imP.GaussianF(array, sig)
 					A[a][b] = array[i + a-u][j + b-u];
 				end
 			end
-			G[i][j] = ArraySum(DotProduct(A, g));
+			G[i][j] = ArraySum(DotProduct(A, g, tempResult));
 		end
 	end
 	return G;

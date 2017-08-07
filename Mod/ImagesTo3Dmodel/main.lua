@@ -10,8 +10,6 @@ local ImagesTo3Dmodel = commonlib.gettable("Mod.ImagesTo3Dmodel");
 ImagesTo3Dmodel:Test("Images");
 ------------------------------------------------------------
 ]]
-NPL.load("(gl)Mod/ImagesTo3Dmodel/TestAbc.lua");
-local TestAbc = commonlib.gettable("Mod.ImagesTo3Dmodel.TestAbc");
 
 local CmdParser = commonlib.gettable("MyCompany.Aries.Game.CmdParser");	
 
@@ -32,8 +30,10 @@ end
 
 function ImagesTo3Dmodel:init()
 	LOG.std(nil, "info", "ImagesTo3Dmodel", "plugin initialized");
-	local p=10;
-	TestAbc.Test(p);
+	-- NPL.load("(gl)Mod/ImagesTo3Dmodel/TestAbc.lua");
+	-- local TestAbc = commonlib.gettable("Mod.ImagesTo3Dmodel.TestAbc");
+	-- local p=10;
+	-- TestAbc.Test(p);
 end
 
 function ImagesTo3Dmodel:OnLogin()
